@@ -1,5 +1,6 @@
 <?php
 namespace booosta\tablelister;
+\booosta\Framework::init_module('tablelister');
 
 class Tablelister extends \booosta\base\Module
 {
@@ -209,6 +210,7 @@ class Tablelister extends \booosta\base\Module
       if(is_string($autoheader_exclude)) $autoheader_exclude = explode(',', $autoheader_exclude);
 
       #\booosta\debug($this->showfields);
+      #\booosta\Framework::debug($this->fkeyfilter);
       if($this->header): $header = $this->header;
       elseif(is_array($this->showfields)): 
         $sfields = array_diff($this->showfields, $autoheader_exclude);
@@ -217,12 +219,12 @@ class Tablelister extends \booosta\base\Module
       elseif(is_array($data[0])):  // show fields and extrafields
         $header = [];
         foreach($data[0] as $fkey=>$dummy):
-          if(!\booosta\ifeval($this->fkeyfilter)) continue;
+          if(!\booosta\Framework::ifeval($this->fkeyfilter)) continue;
           $header[] = in_array($fkey, $autoheader_exclude) ? '' : ucfirst($fkey);
         endforeach;
 
         foreach($this->extrafields as $fkey=>$dummy):
-          if(!\booosta\ifeval($this->fkeyfilter)) continue;
+          if(!\booosta\Framework::ifeval($this->fkeyfilter)) continue;
           $header[] = in_array($fkey, $autoheader_exclude) ? '' : ucfirst($fkey);
         endforeach;
       endif;
@@ -277,7 +279,9 @@ class Tablelister extends \booosta\base\Module
       $extrath = '';
       #\booosta\debug($newheader);
       foreach($newheader as $fkey=>$fheader):
-        if(!is_numeric($fkey) && !\booosta\ifeval($this->fkeyfilter)) continue;
+        #\booosta\Framework::debug($fkey);
+        #\booosta\Framework::debug($this->fkeyfilter);
+        if(!is_numeric($fkey) && !\booosta\Framework::ifeval($this->fkeyfilter)) continue;
         foreach($this->th_attributes as $att=>$val) $extrath .= "$att='$val' ";
 
         #\booosta\debug($this->th_field_class);
@@ -288,7 +292,7 @@ class Tablelister extends \booosta\base\Module
       endforeach;
       #\booosta\debug($ret);
 
-      $missing_headers = sizeof($this->showfields) - sizeof($header);
+      $missing_headers = sizeof($this->showfields ?? []) - sizeof($header);
 
       for($i = 0; $i < $missing_headers; $i++)
         $ret .= "<th width='20px' data-orderable='false' $th_classtag $classtag $extrath>&nbsp;</th>";
@@ -313,7 +317,7 @@ class Tablelister extends \booosta\base\Module
     foreach($data as $key=>$row):
       #\booosta\ttrace("new row $key");
       if(!is_array($row)) continue;
-      if(!\booosta\ifeval($this->keyfilter)) continue;
+      if(!\booosta\Framework::ifeval($this->keyfilter)) continue;
 
       $rowcount++;
       $tr_classtag_oe = $rowcount % 2 ? $tr_classtag_odd : $tr_classtag_even;
@@ -331,7 +335,7 @@ class Tablelister extends \booosta\base\Module
 
         if($fkey == 'ser__obj') continue;
         if(is_array($SERIAL_FIELD) && in_array($fkey, $SERIAL_FIELD)) continue;
-        if(!\booosta\ifeval($this->fkeyfilter)) continue;
+        if(!\booosta\Framework::ifeval($this->fkeyfilter)) continue;
         #\booosta\ttrace(2);
 
         if(is_array($this->td_field_class) && isset($this->td_field_class[$fkey])) $td_classtag = "class='{$this->td_field_class[$fkey]}'";
@@ -343,7 +347,7 @@ class Tablelister extends \booosta\base\Module
             $condition = preg_replace_callback('/{([^}]+)}/', function($m) use($row){ return isset($row[$m[1]])?$row[$m[1]]:$row[$m[0]]; }, $this->condition[$fkey]); 
           //replace {var} with $row[var] but only if that exists
 
-          if(!\booosta\ifeval($condition)):
+          if(!\booosta\Framework::ifeval($condition)):
             $ret .= "<td $td_classtag $classtag>&nbsp;</td>";
             continue;
           endif;
@@ -353,9 +357,6 @@ class Tablelister extends \booosta\base\Module
         if(isset($this->db_fk[$fkey])):
           $sql = "select `{$this->db_fk[$fkey]['showfield']}` from `{$this->db_fk[$fkey]['table']}` where `{$this->db_fk[$fkey]['idfield']}`='$dat'";
           $dat = $this->DB->query_value($sql);
-
-      	  #$dat = $this->DB->query_value('select '.$this->db_fk[$fkey]['showfield'].' from '.$this->db_fk[$fkey]['table'].
-                                        #' where '.$this->db_fk[$fkey]['idfield']."='$dat'");
         endif;
         #\booosta\ttrace(4);
 
@@ -375,7 +376,7 @@ class Tablelister extends \booosta\base\Module
               $condition = preg_replace_callback('/{([^}]+)}/', function($m) use($row){ return isset($row[$m[1]])?$row[$m[1]]:$row[$m[0]]; }, $this->links_condition[$fkey]);
             else $condition = $this->links_condition[$fkey];
 
-            $show_link = \booosta\ifeval($condition);
+            $show_link = \booosta\Framework::ifeval($condition);
             #\booosta\debug("condition: $condition, result: $show_link");
           else:
             $show_link = true;
@@ -425,7 +426,7 @@ class Tablelister extends \booosta\base\Module
         foreach($this->extrafields as $fkey=>$ef):
           #\booosta\ttrace($fkey);
           #\booosta\debug($this->fkeyfilter);
-          if(!\booosta\ifeval($this->fkeyfilter)) continue;
+          if(!\booosta\Framework::ifeval($this->fkeyfilter)) continue;
 
           if(is_array($this->td_field_class) && isset($this->td_field_class[$fkey])) $td_classtag = "class='{$this->td_field_class[$fkey]}'";
           else $td_classtag = $td_classtag_default;
@@ -435,7 +436,7 @@ class Tablelister extends \booosta\base\Module
             elseif(strstr($this->condition[$fkey], '{')) $condition = preg_replace_callback('/{([^}]+)}/', function($m) use($row){ return isset($row[$m[1]])?$row[$m[1]]:$row[$m[0]]; }, $this->condition[$fkey]); //replace {var} with $row[var] 
             else $condition = $this->condition[$fkey];
 
-            if(!\booosta\ifeval($condition)):
+            if(!\booosta\Framework::ifeval($condition)):
               $ret .= "<td $td_classtag $classtag>&nbsp;</td>";
               continue;
             endif;
@@ -483,7 +484,7 @@ class Tablelister extends \booosta\base\Module
     if($this->tabletags) $ret .= '</tbody></table></div>';
     #\booosta\debug($ret);
 
-    if(\booosta\module_exists('datatable') && $this->use_datatable && $this->tabletags):
+    if(\booosta\Framework::module_exists('datatable') && $this->use_datatable && $this->tabletags):
       $table = $this->makeInstance('Datatable', $this->id, $ret);
       if($this->datatable_display_length) $table->set_display_length($this->datatable_display_length);
       $table->set_autoheader($this->autoheader);
@@ -502,7 +503,7 @@ class Tablelister extends \booosta\base\Module
 
   public function get_html_includes()
   {
-    if(\booosta\module_exists('datatable') && $this->use_datatable):
+    if(\booosta\Framework::module_exists('datatable') && $this->use_datatable):
       $dummy = $this->makeInstance('Datatable');
       return $dummy->get_html_includes($this->datatable_libpath);
     endif;
