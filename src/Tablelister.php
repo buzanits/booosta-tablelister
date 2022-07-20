@@ -32,6 +32,7 @@ class Tablelister extends \booosta\base\Module
   protected $array_fk;
   protected $nvl;
   protected $replaces;
+  protected $omit_columns;
 
   protected $datatable_libpath, $datatable_display_length;
   protected $datatable_ajaxurl;
@@ -102,6 +103,9 @@ class Tablelister extends \booosta\base\Module
   public function set_row_attribute($var, $val) { $this->row_attributes[$var] = $val; }
   public function set_data_attribute($var, $val) { $this->data_attributes[$var] = $val; }
   public function set_col_data_attribute($col, $var, $val) { $this->col_data_attributes[$col][$var] = $val; }
+  
+  public function set_omit_columns($data) { $this->omit_columns = $data; }
+  public function add_omit_column($data) { $this->omit_columns[] = $data; }
 
   public function set_datatable_libpath($path) { $this->datatable_libpath = $path; }
   public function set_datatable_display_length($display_length) { $this->datatable_display_length = $display_length; }
@@ -288,14 +292,15 @@ class Tablelister extends \booosta\base\Module
         if(is_array($this->th_field_class) && isset($this->th_field_class[$fkey])) $th_classtag = "class='{$this->th_field_class[$fkey]}'";
         else $th_classtag = $th_classtag_default;
 
-        $ret .= "<th $th_classtag $classtag $extrath>$fheader</th>";
+        if(in_array($fheader, $this->omit_columns)) $omithead = ' class="min-desktop" '; else $omithead= ' class="all" ';
+        $ret .= "<th $th_classtag $classtag $extrath $omithead>$fheader</th>";
       endforeach;
       #\booosta\debug($ret);
 
       $missing_headers = sizeof($this->showfields ?? []) - sizeof($header);
 
       for($i = 0; $i < $missing_headers; $i++)
-        $ret .= "<th width='20px' data-orderable='false' $th_classtag $classtag $extrath>&nbsp;</th>";
+        $ret .= "<th width='20px' data-orderable='false' $th_classtag $classtag $extrath class='all'>&nbsp;</th>";
 
       $ret .= "</tr></thead>\n";
     elseif($this->use_datatable):
@@ -487,6 +492,7 @@ class Tablelister extends \booosta\base\Module
     if(\booosta\Framework::module_exists('datatable') && $this->use_datatable && $this->tabletags):
       $table = $this->makeInstance('Datatable', $this->id, $ret);
       if($this->datatable_display_length) $table->set_display_length($this->datatable_display_length);
+      if(is_array($this->omit_columns)) $table->set_omit_columns($this->omit_columns);
       $table->set_autoheader($this->autoheader);
 
       if(isset($this->lightmode)) $table->set_lightmode($this->lightmode);
