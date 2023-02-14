@@ -32,7 +32,7 @@ class Tablelister extends \booosta\base\Module
   protected $array_fk;
   protected $nvl;
   protected $replaces;
-  protected $omit_columns;
+  protected $omit_columns = [];
 
   protected $datatable_libpath, $datatable_display_length;
   protected $datatable_ajaxurl;
@@ -41,7 +41,7 @@ class Tablelister extends \booosta\base\Module
 
   public function __construct($data, $tabletags = true, $use_datatable = false)
   {
-    #\booosta\debug($data);
+    #\booosta\Framework::debug($data);
     parent::__construct();
 
     $this->id = '0';
@@ -207,6 +207,7 @@ class Tablelister extends \booosta\base\Module
     $th_classtag_default = $th_classtag;
 
     $data = $this->data;
+    #\booosta\Framework::debug($data);
 
     // header
     if($this->use_datatable || $this->always_show_header):
@@ -260,11 +261,11 @@ class Tablelister extends \booosta\base\Module
       $extra = '';
       foreach($this->table_attributes as $att=>$val) $extra .= "$att='$val' ";
       if($this->use_datatable) $tag = 'datatable_'; else $tag = 'tablelister_';
-      $ret .= "<div class='table-responsive'><table id='$tag$this->id' $table_classtag $classtag $extra>";
+      $ret .= "<div class='table-responsive'><table id='$tag$this->id' width='100%' $table_classtag $classtag $extra>";
     endif;
 
     if(is_string($header) && $header != '') $header = explode(',', $header);
-    #\booosta\debug($header);
+    #\booosta\Framework::debug("ret: $ret");
 
     if(is_array($header)):
       // reorder header elements for same order as data
@@ -341,6 +342,7 @@ class Tablelister extends \booosta\base\Module
         if($fkey == 'ser__obj') continue;
         if(is_array($SERIAL_FIELD) && in_array($fkey, $SERIAL_FIELD)) continue;
         if(!\booosta\Framework::ifeval($this->fkeyfilter)) continue;
+        if(array_key_exists($fkey, $this->extrafields)) continue;   // show extrafields in next loop
         #\booosta\ttrace(2);
 
         if(is_array($this->td_field_class) && isset($this->td_field_class[$fkey])) $td_classtag = "class='{$this->td_field_class[$fkey]}'";
@@ -349,7 +351,7 @@ class Tablelister extends \booosta\base\Module
         if($this->condition[$fkey]):
           if(strstr($this->condition[$fkey], '{id}')) $condition = str_replace('{id}', $row['id'], $this->condition[$fkey]);
           elseif(strstr($this->condition[$fkey], '{')) 
-            $condition = preg_replace_callback('/{([^}]+)}/', function($m) use($row){ return isset($row[$m[1]])?$row[$m[1]]:$row[$m[0]]; }, $this->condition[$fkey]); 
+            $condition = preg_replace_callback('/{([^}]+)}/', function($m) use($row){ return isset($row[$m[1]])?$row[$m[1]]:$m[0]; }, $this->condition[$fkey]); 
           //replace {var} with $row[var] but only if that exists
 
           if(!\booosta\Framework::ifeval($condition)):
@@ -378,7 +380,7 @@ class Tablelister extends \booosta\base\Module
           if($this->links_condition[$fkey]):
             if(strstr($this->links_condition[$fkey], '{id}')) $condition = str_replace('{id}', $row['id'], $this->links_condition[$fkey]);
             elseif(strstr($this->links_condition[$fkey], '{'))
-              $condition = preg_replace_callback('/{([^}]+)}/', function($m) use($row){ return isset($row[$m[1]])?$row[$m[1]]:$row[$m[0]]; }, $this->links_condition[$fkey]);
+              $condition = preg_replace_callback('/{([^}]+)}/', function($m) use($row){ return isset($row[$m[1]])?$row[$m[1]]:$m[0]; }, $this->links_condition[$fkey]);
             else $condition = $this->links_condition[$fkey];
 
             $show_link = \booosta\Framework::ifeval($condition);
@@ -389,7 +391,7 @@ class Tablelister extends \booosta\base\Module
 
           if(strstr($link, '{id}')) $link = str_replace('{id}', $row['id'], $link);
           elseif(strstr($link, '{fkid}')) $link = str_replace('{fkid}', $dat, $link);
-          elseif(strstr($link, '{')) $link = preg_replace_callback('/{([^}]+)}/', function($m) use($row){ return isset($row[$m[1]])?$row[$m[1]]:$row[$m[0]]; }, $link);  
+          elseif(strstr($link, '{')) $link = preg_replace_callback('/{([^}]+)}/', function($m) use($row){ return isset($row[$m[1]])?$row[$m[1]]:$m[0]; }, $link);  
           // replace {var} with $row[var] but only if that exists
 
           if($show_link):
@@ -403,8 +405,10 @@ class Tablelister extends \booosta\base\Module
       	  $dat = $this->nvl[$fkey];
       	endif;
 
+        #\booosta\Framework::debug($dat);
         if(strstr($dat, '{id}')) $dat = str_replace('{id}', $row['id'], $dat);
-        elseif(strstr($dat, '{')) $dat = preg_replace_callback('/{([A-Za-z0-9_]+)}/', function($m) use($row){ return isset($row[$m[1]])?$row[$m[1]]:$row[$m[0]]; }, $dat);   // replace {var} with $row[var] but only if that exists
+        elseif(strstr($dat, '{')) $dat = preg_replace_callback('/{([A-Za-z0-9_]+)}/', function($m) use($row){ return isset($row[$m[1]])?$row[$m[1]]:$m[0]; }, $dat);   // replace {var} with $row[var] but only if that exists
+        #\booosta\Framework::debug($dat);
 
         if(isset($this->replaces[$fkey])):
           $repl = $this->replaces[$fkey];
@@ -420,7 +424,7 @@ class Tablelister extends \booosta\base\Module
         endif;
         
         if(strstr($dat, '{id}')) $dat = str_replace('{id}', $row['id'], $dat);
-        elseif(strstr($dat, '{')) $dat = preg_replace_callback('/{([A-Za-z0-9_]+)}/', function($m) use($row){ return isset($row[$m[1]])?$row[$m[1]]:$row[$m[0]]; }, $dat);   // replace {var} with $row[var] but only if that exists
+        elseif(strstr($dat, '{')) $dat = preg_replace_callback('/{([A-Za-z0-9_]+)}/', function($m) use($row){ return isset($row[$m[1]])?$row[$m[1]]:$m[0]; }, $dat);   // replace {var} with $row[var] but only if that exists
 
         $dat = stripslashes($dat);
         $ret .= "<td $td_classtag $classtag $extra1>$link1$dat$link2</td>";
@@ -438,7 +442,7 @@ class Tablelister extends \booosta\base\Module
 
           if($this->condition[$fkey]):
             if(strstr($this->condition[$fkey], '{id}')) $condition = str_replace('{id}', $row['id'], $this->condition[$fkey]);
-            elseif(strstr($this->condition[$fkey], '{')) $condition = preg_replace_callback('/{([^}]+)}/', function($m) use($row){ return isset($row[$m[1]])?$row[$m[1]]:$row[$m[0]]; }, $this->condition[$fkey]); //replace {var} with $row[var] 
+            elseif(strstr($this->condition[$fkey], '{')) $condition = preg_replace_callback('/{([^}]+)}/', function($m) use($row){ return isset($row[$m[1]])?$row[$m[1]]:$m[0]; }, $this->condition[$fkey]); //replace {var} with $row[var] 
             else $condition = $this->condition[$fkey];
 
             if(!\booosta\Framework::ifeval($condition)):
@@ -457,14 +461,14 @@ class Tablelister extends \booosta\base\Module
           $link1 = $link2 = '';
           if($link = $this->links[$fkey]):
             if(strstr($link, '{id}')) $link = str_replace('{id}', $row['id'], $link);
-            elseif(strstr($link, '{')) $link = preg_replace_callback('/{([^}]+)}/', function($m) use($row){ return isset($row[$m[1]])?$row[$m[1]]:$row[$m[0]]; }, $link);  // replace {var} with $row[var] but only if that exists
+            elseif(strstr($link, '{')) $link = preg_replace_callback('/{([^}]+)}/', function($m) use($row){ return isset($row[$m[1]])?$row[$m[1]]:$m[0]; }, $link);  // replace {var} with $row[var] but only if that exists
 
             $link1 = "{LINK|"; $link2 = "|$link}";
           endif;
           #\booosta\ttrace(5);
 
           if(strstr($ef, '{id}')) $efstr = str_replace('{id}', $row['id'], $ef);
-          elseif(strstr($ef, '{')) $efstr = preg_replace_callback('/{([A-Za-z0-9_]+)}/', function($m) use($row){ return isset($row[$m[1]])?$row[$m[1]]:$row[$m[0]]; }, $ef);  // replace {var} with $row[var] but only if that exists
+          elseif(strstr($ef, '{')) $efstr = preg_replace_callback('/{([A-Za-z0-9_]+)}/', function($m) use($row){ return isset($row[$m[1]])?$row[$m[1]]:$m[0]; }, $ef);  // replace {var} with $row[var] but only if that exists
           else $efstr = $ef;
 
           if(isset($this->replaces[$fkey])): 
@@ -477,7 +481,7 @@ class Tablelister extends \booosta\base\Module
           endif;
 
           if(strstr($efstr, '{id}')) $efstr = str_replace('{id}', $row['id'], $efstr);
-          if(strstr($efstr, '{')) $efstr = preg_replace_callback('/{([A-Za-z0-9_]+)}/', function($m) use($row){ return isset($row[$m[1]])?$row[$m[1]]:$row[$m[0]]; }, $efstr);  // replace {var} with $row[var] but only if that exists
+          if(strstr($efstr, '{')) $efstr = preg_replace_callback('/{([A-Za-z0-9_]+)}/', function($m) use($row){ return isset($row[$m[1]])?$row[$m[1]]:$m[0]; }, $efstr);  // replace {var} with $row[var] but only if that exists
           
           $ret .= "<td $td_classtag $classtag $extra1>$link1$efstr$link2</td>";
         endforeach;
@@ -487,7 +491,7 @@ class Tablelister extends \booosta\base\Module
     endforeach;
 
     if($this->tabletags) $ret .= '</tbody></table></div>';
-    #\booosta\debug($ret);
+    #\booosta\Framework::debug($ret);
 
     if(\booosta\Framework::module_exists('datatable') && $this->use_datatable && $this->tabletags):
       $table = $this->makeInstance('Datatable', $this->id, $ret);
