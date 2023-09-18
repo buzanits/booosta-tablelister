@@ -1,6 +1,8 @@
 <?php
 namespace booosta\tablelister;
-\booosta\Framework::init_module('tablelister');
+
+use \booosta\Framework as b;
+b::init_module('tablelister');
 
 class Tablelister extends \booosta\base\Module
 {
@@ -70,7 +72,9 @@ class Tablelister extends \booosta\base\Module
     $this->extrafields = [];
     $this->condition = [];
     $this->replaces = [];
-   
+
+    $this->table_class = 'table table-striped display responsive';
+
     $this->datatable_libpath = 'lib/modules/datatable';
   }
 
@@ -87,6 +91,7 @@ class Tablelister extends \booosta\base\Module
   public function set_conditions($conditions) { $this->condition = $conditions; }
   public function add_condition($key, $condition) { $this->condition[$key] = $condition; }
   public function use_datatable($flag) { $this->use_datatable = $flag; }
+  public function use_form($flag = true) { $this->use_datatable_form = $flag; }
   public function always_show_header($flag) { $this->always_show_header = $flag; }
   public function set_replaces($replaces) { $this->replaces = $replaces; }
 
@@ -379,6 +384,7 @@ class Tablelister extends \booosta\base\Module
         if($link = $this->links[$fkey]):
           if($this->links_condition[$fkey]):
             if(strstr($this->links_condition[$fkey], '{id}')) $condition = str_replace('{id}', $row['id'], $this->links_condition[$fkey]);
+            elseif(strstr($this->links_condition[$fkey], '{encid}')) $condition = str_replace('{encid}', $this->encID($row['id']), $this->links_condition[$fkey]);
             elseif(strstr($this->links_condition[$fkey], '{'))
               $condition = preg_replace_callback('/{([^}]+)}/', function($m) use($row){ return isset($row[$m[1]])?$row[$m[1]]:$m[0]; }, $this->links_condition[$fkey]);
             else $condition = $this->links_condition[$fkey];
@@ -390,6 +396,7 @@ class Tablelister extends \booosta\base\Module
           endif;
 
           if(strstr($link, '{id}')) $link = str_replace('{id}', $row['id'], $link);
+          elseif(strstr($link, '{encid}')) $link = str_replace('{encid}', $this->encID($row['id']), $link);
           elseif(strstr($link, '{fkid}')) $link = str_replace('{fkid}', $dat, $link);
           elseif(strstr($link, '{')) $link = preg_replace_callback('/{([^}]+)}/', function($m) use($row){ return isset($row[$m[1]])?$row[$m[1]]:$m[0]; }, $link);  
           // replace {var} with $row[var] but only if that exists
@@ -407,6 +414,7 @@ class Tablelister extends \booosta\base\Module
 
         #\booosta\Framework::debug($dat);
         if(strstr($dat, '{id}')) $dat = str_replace('{id}', $row['id'], $dat);
+        elseif(strstr($dat, '{encid}')) $dat = str_replace('{encid}', $this->encID($row['id']), $dat);
         elseif(strstr($dat, '{')) $dat = preg_replace_callback('/{([A-Za-z0-9_]+)}/', function($m) use($row){ return isset($row[$m[1]])?$row[$m[1]]:$m[0]; }, $dat);   // replace {var} with $row[var] but only if that exists
         #\booosta\Framework::debug($dat);
 
@@ -424,6 +432,7 @@ class Tablelister extends \booosta\base\Module
         endif;
         
         if(strstr($dat, '{id}')) $dat = str_replace('{id}', $row['id'], $dat);
+        elseif(strstr($dat, '{encid}')) $dat = str_replace('{encid}', $this->encID($row['id']), $dat);
         elseif(strstr($dat, '{')) $dat = preg_replace_callback('/{([A-Za-z0-9_]+)}/', function($m) use($row){ return isset($row[$m[1]])?$row[$m[1]]:$m[0]; }, $dat);   // replace {var} with $row[var] but only if that exists
 
         $dat = stripslashes($dat);
@@ -461,6 +470,7 @@ class Tablelister extends \booosta\base\Module
           $link1 = $link2 = '';
           if($link = $this->links[$fkey]):
             if(strstr($link, '{id}')) $link = str_replace('{id}', $row['id'], $link);
+            elseif(strstr($link, '{encid}')) $link = str_replace('{encid}', $this->encID($row['id']), $link);
             elseif(strstr($link, '{')) $link = preg_replace_callback('/{([^}]+)}/', function($m) use($row){ return isset($row[$m[1]])?$row[$m[1]]:$m[0]; }, $link);  // replace {var} with $row[var] but only if that exists
 
             $link1 = "{LINK|"; $link2 = "|$link}";
@@ -468,6 +478,7 @@ class Tablelister extends \booosta\base\Module
           #\booosta\ttrace(5);
 
           if(strstr($ef, '{id}')) $efstr = str_replace('{id}', $row['id'], $ef);
+          elseif(strstr($ef, '{encid}')) $efstr = str_replace('{encid}', $this->encID($row['id']), $ef);
           elseif(strstr($ef, '{')) $efstr = preg_replace_callback('/{([A-Za-z0-9_]+)}/', function($m) use($row){ return isset($row[$m[1]])?$row[$m[1]]:$m[0]; }, $ef);  // replace {var} with $row[var] but only if that exists
           else $efstr = $ef;
 
@@ -481,7 +492,8 @@ class Tablelister extends \booosta\base\Module
           endif;
 
           if(strstr($efstr, '{id}')) $efstr = str_replace('{id}', $row['id'], $efstr);
-          if(strstr($efstr, '{')) $efstr = preg_replace_callback('/{([A-Za-z0-9_]+)}/', function($m) use($row){ return isset($row[$m[1]])?$row[$m[1]]:$m[0]; }, $efstr);  // replace {var} with $row[var] but only if that exists
+          elseif(strstr($efstr, '{encid}')) $efstr = str_replace('{encid}', $this->encID($row['id']), $efstr);
+          elseif(strstr($efstr, '{')) $efstr = preg_replace_callback('/{([A-Za-z0-9_]+)}/', function($m) use($row){ return isset($row[$m[1]])?$row[$m[1]]:$m[0]; }, $efstr);  // replace {var} with $row[var] but only if that exists
           
           $ret .= "<td $td_classtag $classtag $extra1>$link1$efstr$link2</td>";
         endforeach;
@@ -498,6 +510,7 @@ class Tablelister extends \booosta\base\Module
       if($this->datatable_display_length) $table->set_display_length($this->datatable_display_length);
       if(is_array($this->omit_columns)) $table->set_omit_columns($this->omit_columns);
       $table->set_autoheader($this->autoheader);
+      if($this->use_datatable_form) $table->use_form($this->use_datatable_form);
 
       if(isset($this->lightmode)) $table->set_lightmode($this->lightmode);
       if($this->use_datatable === 'ajax' && $this->datatable_ajaxurl) $table->set_ajaxurl($this->datatable_ajaxurl);
@@ -519,5 +532,12 @@ class Tablelister extends \booosta\base\Module
     endif;
 
     return '';
+  }
+
+  public function encID($id)
+  {
+    #b::debug("id: $id, encid: " . $this->topobj->encID($id));
+    if(is_object($this->topobj) && is_callable([$this->topobj, 'encID'])) return $this->topobj->encID($id);
+    return $id;
   }
 } 
