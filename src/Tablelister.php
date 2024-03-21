@@ -40,6 +40,8 @@ class Tablelister extends \booosta\base\Module
   protected $datatable_ajaxurl;
   protected $autoheader;
   protected $lightmode;
+  protected $use_datatable_form;
+
 
   public function __construct($data, $tabletags = true, $use_datatable = false)
   {
